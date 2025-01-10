@@ -1,8 +1,10 @@
-import argparse
 import math
 import requests
 import re
+import time
 
+from datetime import datetime
+from queue import Queue
 from requests_html import HTML
 
 from models.listing import Listing
@@ -10,27 +12,74 @@ from models.modes import Mode
 
 class RecipeLister():
     START_URL = "https://www.recettes.qc.ca/recettes/recherche?"
+    MAX_RETRIES = 5
     RESULTS_PER_PAGE = 10
 
-    def run(self, mode:Mode):
+    def run(self):
         #TODO - document
 
-        if mode == Mode.CATEGORIES_LISTING:
+        queue = Queue()
+
+        if queue.empty():
             query_links = self.generate_query_links()
-            all_recipe_links = []
 
-        #TODO - do not have loop, just a different scraping mode.
-        for link in query_links:
-            page_content:HTML = self.load_page(link=link)
-            number_of_pages = self.get_total_page_quantity(page_content=page_content)
-            listing_links_per_category = self.generate_listing_links(query_link=link, number_of_pages=number_of_pages)
-            all_recipe_links.append(listing_links_per_category)
+            for link in query_links:
+                listing_item = Listing(
+                    link = link,
+                    mode = Mode.CATEGORIES_LISTING,
+                    successful = True,
+                    attemps = 0
+                )
 
-        #TODO - add different mode
-        for link in all_recipe_links[0]:
-            self.get_detail_links(link)
+                queue.put(listing_item)
 
-        pass
+        while not queue.empty():
+            queued_item = queue.get()
+
+            if queued_item.attemps <= RecipeLister.MAX_RETRIES:
+                if queued_item.mode == Mode.CATEGORIES_LISTING:
+                    queued_item.startdate = datetime.now()
+                    queued_item.attemps += 1
+                    
+                    try:
+                        page_content:HTML = self.load_page(link=link)
+                        number_of_pages = self.get_total_page_quantity(page_content=page_content)
+                        listing_links_per_category = self.generate_listing_links(query_link=link, number_of_pages=number_of_pages)
+                        for link in listing_links_per_category:
+                            listing_item = Listing(
+                                link = link,
+                                mode = Mode.CATEGORIES_LISTING_PAGE
+                            )
+
+                            queue.put(listing_item)
+
+                    except Exception:
+                        queued_item.enddate = datetime.now()
+                        queued_item.sucessful = False
+                        queue.put(queued_item)
+
+                if queued_item.mode == Mode.CATEGORIES_LISTING_PAGE:
+                    queued_item.startdate = datetime.now()
+                    queued_item.attemps += 1
+
+                    try:
+                        all_detail_links = self.get_detail_links(link)
+
+                        for link in all_detail_links:
+                            listing_item = Listing(
+                                link = link,
+                                mode = Mode.RECIPE_LINKS
+                            )
+
+                            queue.put(listing_item)
+
+                    except Exception:
+                        queued_item.enddate = datetime.now()
+                        queued_item.sucessful = False
+                        queue.put(queued_item)
+            #NOTE - needs to stop if Mode == Mode.RECIPE_LINKS
+            #NOTO - However, I'm getting more links this way. Let's think about this later. 
+            pass
 
     def get_total_page_quantity(self, page_content:HTML):
         #TODO - document
@@ -54,9 +103,7 @@ class RecipeLister():
 
         
         return all_detail_links
-
-
-
+    
 
     def generate_listing_links(self, query_link:str, number_of_pages:int):
         #TODO - document
@@ -83,6 +130,7 @@ class RecipeLister():
     def load_page(self, link:str):
         #TODO - document
         #TODO - error management
+        time.sleep(60)
         response = requests.get(link)
         page_content = HTML(html=response.text)
 
@@ -90,21 +138,9 @@ class RecipeLister():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="The mode you would like to run the RecipeLister with.")
-    mode_choices = ["categories_listing", "recipe_links"]
-    parser.add_argument(
-        "--mode",
-        type=Mode, 
-        choices=list(Mode), 
-        help=f"Modes {", ".join(list(Mode))} can be used."
-    )
-
-    args = parser.parse_args()
-
-
 
     app = RecipeLister()
-    app.run(mode=args.mode)
+    app.run()
 
     #TODO - listing modes
     # - generic listing mode
@@ -114,10 +150,6 @@ if __name__ == "__main__":
     # - document
     # - error management
     # - write to database
-    # - add modes
-    #   - listing
-    #   - detail links
-    #   - details
     #TODO - database work
     # - listing
     #   - link
@@ -133,6 +165,5 @@ if __name__ == "__main__":
     #   - make OOP models
     #TODO - run scripts
     # - find of other solutions than NiFi would be easier
-    #TODO - add queue
-    # - using from queue import Queue
+
     
