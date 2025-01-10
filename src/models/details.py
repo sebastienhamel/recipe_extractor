@@ -11,6 +11,13 @@ class Method(BaseModel):
     instruction: str
 
 class Recipe(BaseModel):
+    name: str
+    portions: int
+    preperation_time: int
+    cooking_time: int
+    total_time: int
+    category: str
+    key_works: str
     ingredients: List[Ingredient]
     method: List[Method]
 
