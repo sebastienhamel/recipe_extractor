@@ -3,3 +3,4 @@ lxml_html_clean
 pydantic
 sqlalchemy
 alembic
+loguru
