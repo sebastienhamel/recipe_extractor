@@ -6,12 +6,17 @@ import time
 from datetime import datetime
 from queue import Queue
 from requests_html import HTML
+from sqlalchemy.orm import Session 
 from typing import List
 
-from models.listing import Listing
+# from models.listing import Listing
 from models.modes import Mode
 
 from utils.logger_service import get_logger
+from utils.database.database_connection import engine, get_database
+from utils.database.database_tables import Base, Listing
+
+Base.metadata.create_all(bind = engine)
 
 class RecipeLister():
     START_URL = "https://www.recettes.qc.ca/recettes/recherche?"
@@ -27,6 +32,7 @@ class RecipeLister():
         self.logger.info("Starting listing modes.")
         queue = Queue()
 
+        #TODO - should be in def seed_listing()
         if queue.empty():
             self.logger.info("Queue is empty.")
             query_links = self.generate_query_links()
@@ -36,7 +42,7 @@ class RecipeLister():
                     link = link,
                     mode = Mode.CATEGORIES_LISTING,
                     successful = True,
-                    attemps = 0
+                    attempts = 0
                 )
 
                 queue.put(listing_item)
@@ -45,19 +51,21 @@ class RecipeLister():
             queued_item:Listing = queue.get()
             self.logger.info(f"Processing link {queued_item.link} for {queued_item.mode}")
 
-            if queued_item.attemps <= RecipeLister.MAX_RETRIES:
+            if queued_item.attempts <= RecipeLister.MAX_RETRIES:
                 if queued_item.mode == Mode.CATEGORIES_LISTING:
                     queued_item.startdate = datetime.now()
-                    queued_item.attemps += 1
+                    queued_item.attempts += 1
                     
                     try:
                         page_content:HTML = self.load_page(link=queued_item.link)
                         number_of_pages = self.get_total_page_quantity(page_content=page_content)
                         listing_links_per_category = self.generate_listing_links(query_link=link, number_of_pages=number_of_pages)
+                        
                         for link in listing_links_per_category:
                             listing_item = Listing(
                                 link = link,
-                                mode = Mode.CATEGORIES_LISTING_PAGE
+                                mode = Mode.CATEGORIES_LISTING_PAGE, 
+                                attempts = 0
                             )
                             
                             self.logger.info(f"Adding link {listing_item.link} to queue.")
@@ -73,35 +81,39 @@ class RecipeLister():
 
                 elif queued_item.mode == Mode.CATEGORIES_LISTING_PAGE:
                     queued_item.startdate = datetime.now()
-                    queued_item.attemps += 1
+                    queued_item.attempts += 1
                     
-                    #TODO - check if processing of listing link only. Seems like it's not. 
                     #NOTE - needs to stop if Mode == Mode.RECIPE_LINKS
                     try:
                         all_detail_links = self.get_detail_links(link=queued_item.link)
-                        
+                        all_detail_listing_items: List[Listing] = []
+
                         for link in all_detail_links:
                             listing_item = Listing(
                                 link = link,
                                 mode = Mode.RECIPE_LINKS
                             )
 
-                            self.logger.info(f"Adding link {listing_item.link} to queue.")
-                            queue.put(listing_item)
+                            all_detail_listing_items.append(listing_item)
+
+                        with next(get_database()) as database:
+                            database.add_all(all_detail_listing_items)
+                            database.commit()
+                            self.logger.info("All recipe links saved to database successfully. ")
 
                         self.logger.info("Link processing successful")
                     
                     except Exception:
                         self.logger.info(f"Error while processing link {queued_item.link} for {queued_item.mode} ")
                         queued_item.enddate = datetime.now()
-                        queued_item.sucessful = False
+                        queued_item.successful = False
                         queue.put(queued_item)
 
                 else:
                     self.logger.info(f"Unmanaged mode for link {queued_item.link}: {queued_item.mode}")
 
             else:
-                self.logger.info(f"Item has {queued_item.attemps} retries. Skipping.")
+                self.logger.info(f"Item has {queued_item.attempts} retries. Skipping.")
 
             pass
 
@@ -150,8 +162,8 @@ class RecipeLister():
 
         logger.info("Generating query links.")
         query_term_filter = "search[query]="
-        query_terms = ["galette"]
-        #query_terms = ["galette", "biscuit", "gateau"]
+        #query_terms = ["galette"]
+        query_terms = ["galette", "biscuit", "gateau"]
         query = []
 
         for term in query_terms:
