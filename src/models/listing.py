@@ -10,14 +10,5 @@ class Listing(BaseModel):
     startdate: datetime|None = Field(init = False, default = None)
     enddate: datetime|None = Field(init = False, default = None)
     successful: bool = Field(default = False)
-    attemps: int = Field(init = False, default = 0)
+    attempts: int = Field(init = False, default = 0)
     
-
-
-    #   - link
-    #   - startdate
-    #   - enddate
-    #   - successful
-    #   - primary key
-    #   - unique key
-    #   - id

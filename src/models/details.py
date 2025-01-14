@@ -28,3 +28,5 @@ class Details(BaseModel):
     enddate: datetime
     successful: bool
     data: Recipe
+    attempts: int
+    #NOTE - might be better to add some recipe informations here like name, category, etc.
