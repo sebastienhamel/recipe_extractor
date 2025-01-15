@@ -5,14 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Recipe scraper",
+            "name": "Recipe scraper - Listing",
             "type": "debugpy",
             "request": "launch",
             "program": "src/listing_scraper.py",
             "console": "integratedTerminal",
+            "justMyCode": false,
             "args": [
                 "--mode", "categories_listing"
             ]
+        }
+        {
+            "name": "Recipe scraper - Details",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/detail_scraper.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
     ]
 }

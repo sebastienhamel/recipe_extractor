@@ -1,9 +1,9 @@
-import datetime
-from types import List
+from datetime import datetime
+from typing import List
 from pydantic import BaseModel
 
 class Ingredient(BaseModel):
-    quantity: float
+    quantity_unit: str
     ingredient_name: str
 
 class Method(BaseModel):
@@ -16,8 +16,8 @@ class Recipe(BaseModel):
     preperation_time: int
     cooking_time: int
     total_time: int
-    category: str
-    key_works: str
+    categories: List[str]
+    key_works: List[str]
     ingredients: List[Ingredient]
     method: List[Method]
 
