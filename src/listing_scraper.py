@@ -15,6 +15,7 @@ from models.modes import Mode
 from utils.logger_service import get_logger
 from utils.database.database_connection import engine, get_database
 from utils.database.database_tables import Base, Listing
+from utils.scraper_service import load_page
 
 Base.metadata.create_all(bind = engine)
 
@@ -57,9 +58,9 @@ class RecipeLister():
                     queued_item.attempts += 1
                     
                     try:
-                        page_content:HTML = self.load_page(link=queued_item.link)
+                        page_content:HTML = load_page(link=queued_item.link)
                         number_of_pages = self.get_total_page_quantity(page_content=page_content)
-                        listing_links_per_category = self.generate_listing_links(query_link=link, number_of_pages=number_of_pages)
+                        listing_links_per_category = self.generate_listing_links(query_link=queued_item.link, number_of_pages=number_of_pages)
                         
                         for link in listing_links_per_category:
                             listing_item = Listing(
@@ -85,7 +86,7 @@ class RecipeLister():
                     
                     #NOTE - needs to stop if Mode == Mode.RECIPE_LINKS
                     try:
-                        all_detail_links = self.get_detail_links(link=queued_item.link)
+                        all_detail_links = self.get_detail_links(link = queued_item.link)
                         all_detail_listing_items: List[Listing] = []
 
                         for link in all_detail_links:
@@ -133,7 +134,7 @@ class RecipeLister():
         """ Finds detail links from search results. """
 
         self.logger.info("Retreiving detail links.")
-        page_content = self.load_page(link=link)
+        page_content = load_page(link = link)
         search_result = page_content.xpath("//section[@id='search-results']//h4/a")
         all_detail_links = []
 
@@ -170,24 +171,6 @@ class RecipeLister():
             query.append(RecipeLister.START_URL + query_term_filter + term)
         
         return query
-        
-
-    def load_page(self, link:str) -> HTML:
-        """ Load a page using requests, transtyping the page into an HTML object. 
-        
-            params
-            link(str): the link to load the page with.
-
-            return
-            page_content(html): the page content loaded
-        """
-
-        #TODO - error management
-        time.sleep(60)
-        response = requests.get(link)
-        page_content = HTML(html=response.text)
-
-        return page_content
 
 
 if __name__ == "__main__":
@@ -203,20 +186,11 @@ if __name__ == "__main__":
     #TODO - all modes
     # - document
     # - error management
-    # - write to database
+
     #TODO - database work
-    # - listing
-    #   - link
-    #   - startdate
-    #   - enddate
-    #   - successful
-    #   - primary key
-    #   - unique key
-    #   - id
     # - details
     #   - we might be getting more links from details
     # - migrations
-    #   - using Alembic, sql-alchemy and pydantic
     #   - make OOP models
     #TODO - run scripts
     # - find of other solutions than NiFi would be easier
