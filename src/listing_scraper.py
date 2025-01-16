@@ -7,6 +7,7 @@ from datetime import datetime
 from queue import Queue
 from requests_html import HTML
 from sqlalchemy.orm import Session 
+from sqlalchemy.exc import IntegrityError
 from typing import List
 
 # from models.listing import Listing
@@ -84,25 +85,26 @@ class RecipeLister():
                     queued_item.startdate = datetime.now()
                     queued_item.attempts += 1
                     
-                    #NOTE - needs to stop if Mode == Mode.RECIPE_LINKS
                     try:
                         all_detail_links = self.get_detail_links(link = queued_item.link)
-                        all_detail_listing_items: List[Listing] = []
 
-                        for link in all_detail_links:
-                            listing_item = Listing(
-                                link = link,
-                                mode = Mode.RECIPE_LINKS
-                            )
-
-                            all_detail_listing_items.append(listing_item)
-
+                        
                         with next(get_database()) as database:
-                            database.add_all(all_detail_listing_items)
-                            database.commit()
-                            self.logger.info("All recipe links saved to database successfully. ")
+                            for link in all_detail_links:
+                                listing_item = Listing(
+                                    link = link,
+                                    mode = Mode.RECIPE_LINKS
+                                )
 
-                        self.logger.info("Link processing successful")
+                                try:
+                                    database.add(listing_item)
+                                    database.commit()
+                                    self.logger.info("Link processing successful")
+                                
+                                except IntegrityError as e:
+                                    self.logger.warning("Listing item is a duplicate. Rollback.")
+                                    database.rollback()
+
                     
                     except Exception:
                         self.logger.info(f"Error while processing link {queued_item.link} for {queued_item.mode} ")
