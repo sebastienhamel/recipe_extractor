@@ -94,6 +94,7 @@ class RecipeLister():
                                 listing_item = Listing(
                                     link = link,
                                     mode = Mode.RECIPE_LINKS
+                                    attempts = 0
                                 )
 
                                 try:
