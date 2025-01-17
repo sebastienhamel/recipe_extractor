@@ -1,6 +1,9 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import os
+
+from sqlalchemy import create_engine, or_
+from sqlalchemy.orm import sessionmaker
+
+from utils.database.database_tables import Listing
 
 DATABSE_URL = os.getenv("DATABASE_URL")
 
@@ -21,3 +24,11 @@ def get_database():
     finally:
         database.close()
 
+def get_listing_to_process(limit:int):
+    database = SessionLocal()
+
+    try:
+       return database.query(Listing).filter(or_(Listing.successful.is_(None), Listing.successful.is_(False))).limit(limit).all()
+    
+    finally:
+        database.close()

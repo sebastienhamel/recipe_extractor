@@ -1,25 +1,25 @@
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class Ingredient(BaseModel):
-    quantity_unit: str
-    ingredient_name: str
+    quantity_unit: str = ""
+    ingredient_name: str = ""
 
 class Method(BaseModel):
-    step_number: int
-    instruction: str
+    step_number: int = 0
+    instruction: str = ""
 
 class Recipe(BaseModel):
-    name: str
-    portions: int
-    preperation_time: int
-    cooking_time: int
-    total_time: int
-    categories: List[str]
-    key_works: List[str]
-    ingredients: List[Ingredient]
-    method: List[Method]
+    name: str = ""
+    portions: int = 0
+    preparation_time: str = ""
+    cooking_time: str = ""
+    total_time: str = ""
+    categories: List[str] = []
+    keywords: List[str] = []
+    ingredients: List[Ingredient] = []
+    method: List[Method] = []
 
 class Details(BaseModel):
     id: int
