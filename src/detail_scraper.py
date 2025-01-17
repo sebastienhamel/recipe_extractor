@@ -1,6 +1,5 @@
 from typing import List
 from datetime import datetime
-from operator import attrgetter
 
 from requests_html import HTML
 
@@ -118,7 +117,13 @@ if __name__ == "__main__":
             listing.successful = True
 
             database = get_database()
-            database.add(app.details)
+
+            detail_item = Detail(
+                link = listing.link,
+                timestamp = datetime.now()
+                data = app.details
+            )
+            database.add(detail_item)
             
         except:
             listing.enddate = datetime.now()
