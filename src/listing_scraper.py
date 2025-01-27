@@ -93,7 +93,7 @@ class RecipeLister():
                             for link in all_detail_links:
                                 listing_item = Listing(
                                     link = link,
-                                    mode = Mode.RECIPE_LINKS
+                                    mode = Mode.RECIPE_LINKS,
                                     attempts = 0
                                 )
 
