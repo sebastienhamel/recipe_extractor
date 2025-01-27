@@ -1,3 +1,5 @@
+import re
+
 from typing import List
 from datetime import datetime
 
@@ -76,10 +78,38 @@ class RecipeScraper():
 
 
     def get_method(self):
+        #TODO - finish method
         method:List[Method] = []
 
-        method_elements = self.page_content.xpath("//section[contains(@class, 'method')]")
-        pass
+        method_elements = self.page_content.xpath("//section[contains(@class, 'method')]")[0]
+        number_of_steps = len(re.findall(r"Étape ", method_elements.text))
+        all_one_digit_steps_descriptions = re.findall(r'(?<=Étape \d\n).*', method_elements.text) # Can only do a look behind with a fixed range.
+
+        for index, value in enumerate(all_one_digit_steps_descriptions):
+            step = Method(
+                step_number=index + 1, 
+                instruction=value
+            )
+
+            method.append(step)
+
+        # Number of steps > 9
+        all_two_digit_steps_descriptions = re.findall(r'(?<=Étape \d{2}\n).*', method_elements.text) # Can only do a look behind with a fixed range(!\d{1,2})
+
+        for index, value in enumerate(all_two_digit_steps_descriptions):
+            step = Method(
+                step_number = index + 9,
+                instruction = value
+            )
+
+            method.append(step)
+
+        # Final check to make sure we have all steps for method
+        if number_of_steps == len(method):
+            self.details.data.method = method
+        else:
+            raise ValueError(f"The code did not return all the method steps for {self.details.link}. Returned only the following steps {method}")
+
 
     def get_category(self):
         categories = []
@@ -104,6 +134,7 @@ class RecipeScraper():
 if __name__ == "__main__":
     logger = get_logger(name = RecipeScraper.__name__)
     listing_to_process = get_listing_to_process(limit=1)
+    
 
     for listing in listing_to_process:
         listing.attempts += 1
@@ -111,23 +142,24 @@ if __name__ == "__main__":
         page_content = load_page(listing.link)
 
         app = RecipeScraper(logger = logger, page_content= page_content)
-        try:
-            app.run()
-            listing.enddate = datetime.now()
-            listing.successful = True
 
-            database = get_database()
+        with(next(get_database())) as database:
+            try:
+                app.run()
+                listing.enddate = datetime.now()
+                listing.successful = True
 
-            detail_item = Detail(
-                link = listing.link,
-                timestamp = datetime.now()
-                data = app.details
-            )
-            database.add(detail_item)
-            
-        except:
-            listing.enddate = datetime.now()
-            listing.successful = False
+                detail_item = Detail(
+                    link = listing.link,
+                    timestamp = datetime.now(),
+                    data = app.details
+                )
+                #TODO - insertion in the database won't work because "Excpected a Recipe for the 'data' field."
+                database.add(detail_item)
+                
+            except:
+                listing.enddate = datetime.now()
+                listing.successful = False
 
-        database.update(listing)
-        database.commit()
+            database.update(listing)
+            database.commit()
