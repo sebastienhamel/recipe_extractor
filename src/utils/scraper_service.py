@@ -22,7 +22,7 @@ def load_page(link:str, current_attempts:int = 0) -> HTML:
 
     while current_attempts <= MAX_RETRIES:
         # Reduce de risk of being blocked since we are not using a proxy. 
-        time.sleep(60)
+        #time.sleep(60)
         
         response = requests.get(link)
 

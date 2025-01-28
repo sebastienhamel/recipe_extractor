@@ -4,10 +4,11 @@ from typing import List
 from datetime import datetime
 
 from requests_html import HTML
+from sqlalchemy.exc import IntegrityError
 
 from utils.logger_service import get_logger
 from utils.scraper_service import load_page
-from utils.database.database_tables import Detail
+from utils.database.database_tables import Detail, Listing
 from utils.database.database_connection import get_listing_to_process
 from utils.database.database_connection import get_database
 
@@ -152,14 +153,26 @@ if __name__ == "__main__":
                 detail_item = Detail(
                     link = listing.link,
                     timestamp = datetime.now(),
-                    data = app.details
+                    data = app.details.data
                 )
-                #TODO - insertion in the database won't work because "Excpected a Recipe for the 'data' field."
-                database.add(detail_item)
+
+                try:
+                    database.add(detail_item)
+                    app.logger.info("Link processing successful")
+                
+                except IntegrityError as e:
+                    app.logger.warning("Detail item is a duplicate. Rollback.")
+                    database.rollback()
                 
             except:
                 listing.enddate = datetime.now()
                 listing.successful = False
 
-            database.update(listing)
+            #update listing
+            database.query(Listing).where(Listing.id == listing.id).update({
+                "attempts": listing.attempts, 
+                "enddate": listing.enddate,
+                "successful": listing.successful,
+                "startdate": listing.startdate
+            })
             database.commit()

@@ -3,6 +3,8 @@
     "python.envFile": "${workspaceFolder}/.env",
     "python.analysis.extraPaths": [
         "./",
-        "./src"
+        "./src",
+        "./src/utils",
+        "./src/utils/database"
     ]
 }

@@ -12,7 +12,7 @@ class Method(BaseModel):
 
 class Recipe(BaseModel):
     name: str = ""
-    portions: int = 0
+    portions: str = 0
     preparation_time: str = ""
     cooking_time: str = ""
     total_time: str = ""
