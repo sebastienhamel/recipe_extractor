@@ -62,12 +62,11 @@ class RecipeScraper():
             try:
                 full_ingredient = ingredient_element.text
                 ingredient_quantity = ingredient_element.xpath("//span[@class='qty']")[0].text
-                ingredient_name = full_ingredient.lstrip(ingredient_quantity)
+                ingredient_name = full_ingredient.removeprefix(ingredient_quantity)
 
             except Exception as e:
                 self.logger.error(f"Error: {e}")
             
-            #TODO - bug when last letter of quantity is same as first letter of ingredient name
             ingredient = Ingredient(
                 quantity_unit=ingredient_quantity,
                 ingredient_name=ingredient_name.strip()
@@ -134,7 +133,7 @@ class RecipeScraper():
 
 if __name__ == "__main__":
     logger = get_logger(name = RecipeScraper.__name__)
-    listing_to_process = get_listing_to_process(limit=1)
+    listing_to_process = get_listing_to_process(limit=5)
     
 
     for listing in listing_to_process:
