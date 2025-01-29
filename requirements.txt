@@ -1,5 +1,4 @@
 requests-html
-lxml_html_clean
 pydantic
 sqlalchemy
 alembic

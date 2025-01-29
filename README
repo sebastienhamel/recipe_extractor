@@ -1,0 +1,7 @@
+Hello!
+
+Here are the steps you should follow in order to build the container:
+- setup a file in your project with the full url to the database: (mysql+mysqlconnector://username:password@localhost:3306)
+- build your container using docker build -t containerName
+- run your image using docker run --env-file=nameOfYourFile.env containerName
+- 
