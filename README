@@ -1,7 +1,38 @@
 Hello!
 
-Here are the steps you should follow in order to build the container:
-- setup a file in your project with the full url to the database: (mysql+mysqlconnector://username:password@localhost:3306)
+I have recently developped an obsession with a type of dessert found in Québec, Canada: the galette. 
+
+Historically, most types of food found in Québec can be traced to the nations who invaded the territory
+a couple of hundred years ago: France and Great Britain. Even if traditional food from Québec is not
+directly found in these nation, you can often see the roots of it. For example, meat pies are pretty common
+in Québec and can also be found in British traditional cooking. 
+
+Galettes (and obviously poutine) seem the be an exception. 
+
+This projects aim to scrape data from a popular recipe website in Québec and find if maybe the origin of the
+galette could be not from colonizing nations but from practicality. Were the galettes invented in Québec because
+they used ingredients more readily available? Were the galettes invented because they require less precision
+than say a cake maybe? 
+
+These are the questions I am trying to answer. 
+
+Currently, the project is incomplete. These are my planned steps:
+- Find all recipe related to sibling deserts in a popular Québec recipe website (cakes, cookies and obviously
+galettes) (done)
+- Scrape the recipes (work in progress)
+- Dockerize the scripts so they can run on Microsoft Azure (work in progress)
+- Normalize the data
+- Perform statistical analysis on the data
+- Answer my question
+
+Here are the steps you should follow in order to build the container (bear in mind, I am not finished with Docker
+this WILL NOT work for now):
+- setup a file in your project containing:
+    - the full url to the database: DATABASE_URL=mysql+mysqlconnector://username:password@localhost:3306
+    - MYSQL_ROOT_PASSWORD=yourPassword
+    - MYSQL_DATABASE=recipeextractor
+    - MYSQL_USER=recipe_scraper
+    - MYSQL_PASSWORD=yourOtherPassword
 - build your container using docker build -t containerName
 - run your image using docker run --env-file=nameOfYourFile.env containerName
 - 
