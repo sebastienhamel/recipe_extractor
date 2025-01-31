@@ -1,33 +1,37 @@
-#ARG DATABASE_URL
+# Use Ubuntu 24.04 as the base image
 FROM ubuntu:24.04
 
+# Set environment variables to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package lists and install required packages
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \ 
-    python3-venv \
-    gettext
+    python3 python3-pip python3-venv \
+    mysql-server \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/app
+# Set working directory
+WORKDIR /app
 
-# install mysql-server
-RUN apt install mysql-server -y
+# Copy Python dependencies first to leverage Docker caching
+COPY requirements.txt /app/
 
-# create venv and installs requirements
-COPY requirements.txt /opt/app/requirements.txt
-RUN python3 -m venv venv && \
-    . venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt
-  
-RUN usermod -d /var/lib/mysql mysql    
+# Create virtual environment
+RUN python3 -m venv venv
+ENV PATH="/app/venv/bin:$PATH"
 
-# copy scripts
-COPY . /opt/app
-COPY mysql-init.sql /docker-entrypoint-initdb.d/
-COPY entrypoint.sh /entrypoint.sh
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-RUN chmod +x /entrypoint.sh
+# Copy the rest of the application files
+COPY . /app
 
+# Expose MySQL port
 EXPOSE 3306
 
-CMD ["/entrypoint.sh"]
+# Copy the entrypoint script and give execution permissions
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entrypoint script
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]

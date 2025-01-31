@@ -1,6 +1,5 @@
 requests-html
 pydantic
 sqlalchemy
-alembic
 loguru
 mysql-connector-python
