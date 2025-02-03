@@ -1,4 +1,3 @@
-import json
 from sqlalchemy.types import TypeDecorator, JSON
 from pydantic import ValidationError
 from models.details import Recipe
