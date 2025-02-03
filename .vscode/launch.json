@@ -11,9 +11,7 @@
             "program": "src/listing_scraper.py",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": [
-                "--mode", "categories_listing"
-            ]
+
         }
         {
             "name": "Recipe scraper - Details",
