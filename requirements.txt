@@ -1,5 +1,7 @@
 requests-html
+alembic
 pydantic
 sqlalchemy
 loguru
 mysql-connector-python
+lxml.html.clean
