@@ -8,8 +8,8 @@ from sqlalchemy.exc import IntegrityError
 
 from utils.logger_service import get_logger
 from utils.scraper_service import load_page
-from utils.database.database_tables import Detail, Listing
-from utils.database.database_connection import get_listing_to_process
+from utils.database.database_tables import Detail
+from utils.database.database_connection import get_listing_to_process, update_listing
 from utils.database.database_connection import get_database
 
 from models.details import Recipe, Ingredient, Method
@@ -78,7 +78,6 @@ class RecipeScraper():
 
 
     def get_method(self):
-        #TODO - finish method
         method:List[Method] = []
 
         method_elements = self.page_content.xpath("//section[contains(@class, 'method')]")[0]
@@ -168,10 +167,5 @@ if __name__ == "__main__":
                 listing.successful = False
 
             #update listing
-            database.query(Listing).where(Listing.id == listing.id).update({
-                "attempts": listing.attempts, 
-                "enddate": listing.enddate,
-                "successful": listing.successful,
-                "startdate": listing.startdate
-            })
+            update_listing(listing=listing)
             database.commit()
