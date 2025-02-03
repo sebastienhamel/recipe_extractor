@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from utils.logger_service import get_logger
 from utils.scraper_service import load_page
 from utils.database.database_tables import Detail
-from utils.database.database_connection import get_listing_to_process, update_listing
+from utils.database.database_connection import get_details_to_process, update_listing
 from utils.database.database_connection import get_database
 
 from models.details import Recipe, Ingredient, Method
@@ -132,10 +132,11 @@ class RecipeScraper():
 
 if __name__ == "__main__":
     logger = get_logger(name = RecipeScraper.__name__)
-    listing_to_process = get_listing_to_process(limit=5)
+    listing_to_process = get_details_to_process(limit=5)
     
 
     for listing in listing_to_process:
+        logger.info(f"Processing details for {listing.link}")
         listing.attempts += 1
         listing.startdate = datetime.now()
         page_content = load_page(listing.link)
@@ -157,6 +158,7 @@ if __name__ == "__main__":
                 try:
                     database.add(detail_item)
                     app.logger.info("Link processing successful")
+                    database.commit()
                 
                 except IntegrityError as e:
                     app.logger.warning("Detail item is a duplicate. Rollback.")
@@ -168,4 +170,3 @@ if __name__ == "__main__":
 
             #update listing
             update_listing(listing=listing)
-            database.commit()

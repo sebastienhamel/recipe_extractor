@@ -35,6 +35,15 @@ def get_listing_to_process(limit:int) -> List[Listing]:
     finally:
         database.close()
 
+def get_details_to_process(limit:int) -> List[Listing]:
+    database = SessionLocal()
+
+    try:
+        return database.query(Listing).filter(and_(or_(Listing.successful.is_(None), Listing.successful.is_(False)), Listing.mode.__eq__(Mode.RECIPE_LINKS))).limit(limit).all()
+    
+    finally:
+        database.close()
+
 def update_listing(listing:Listing):
     database = SessionLocal()
     
