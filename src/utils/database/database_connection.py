@@ -1,9 +1,11 @@
 import os
+from typing import List
 
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker
 
 from utils.database.database_tables import Listing
+from models.modes import Mode
 
 DATABSE_URL = os.getenv("DATABASE_URL")
 
@@ -24,11 +26,26 @@ def get_database():
     finally:
         database.close()
 
-def get_listing_to_process(limit:int):
+def get_listing_to_process(limit:int) -> List[Listing]:
     database = SessionLocal()
 
     try:
-       return database.query(Listing).filter(or_(Listing.successful.is_(None), Listing.successful.is_(False))).limit(limit).all()
+        return database.query(Listing).filter(and_(or_(Listing.successful.is_(None), Listing.successful.is_(False)), Listing.mode.__ne__(Mode.RECIPE_LINKS))).limit(limit).all()
+    
+    finally:
+        database.close()
+
+def update_listing(listing:Listing):
+    database = SessionLocal()
+    
+    try:
+        database.query(Listing).where(Listing.id == listing.id).update({
+            "attempts": listing.attempts, 
+            "enddate": listing.enddate,
+            "successful": listing.successful,
+            "startdate": listing.startdate
+        })
+        database.commit()
     
     finally:
         database.close()

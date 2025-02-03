@@ -1,20 +1,15 @@
 import math
-import requests
 import re
-import time
 
 from datetime import datetime
-from queue import Queue
 from requests_html import HTML
-from sqlalchemy.orm import Session 
 from sqlalchemy.exc import IntegrityError
 from typing import List
 
-# from models.listing import Listing
 from models.modes import Mode
 
 from utils.logger_service import get_logger
-from utils.database.database_connection import engine, get_database
+from utils.database.database_connection import engine, get_database, get_listing_to_process, update_listing
 from utils.database.database_tables import Base, Listing
 from utils.scraper_service import load_page
 
@@ -32,94 +27,120 @@ class RecipeLister():
         """ Processes the listing for the recipe scraper. """
 
         self.logger.info("Starting listing modes.")
-        queue = Queue()
+        # queue = Queue()
 
-        #TODO - should be in def seed_listing()
-        if queue.empty():
-            self.logger.info("Queue is empty.")
-            query_links = self.generate_query_links()
+        listings_to_process = get_listing_to_process(limit=5)
+        
+        if listings_to_process:
+            
+            #check for max retries
+            for listing in listings_to_process:
+                self.logger.info(f"Processing link {listing.link} for {listing.mode}")
+                listing.startdate = datetime.now()
+                listing.attempts += 1
+                new_listing_items: List[Listing] = []
 
-            for link in query_links:
-                listing_item = Listing(
-                    link = link,
-                    mode = Mode.CATEGORIES_LISTING,
-                    successful = True,
-                    attempts = 0
-                )
+                try:
 
-                queue.put(listing_item)
+                    if listing.mode == Mode.CATEGORIES_LISTING:
+                        new_listing_items = self.process_categories_listing(listing_to_process=listing)
 
-        while not queue.empty():
-            queued_item:Listing = queue.get()
-            self.logger.info(f"Processing link {queued_item.link} for {queued_item.mode}")
+                    if listing.mode == Mode.CATEGORIES_LISTING_PAGE:
+                        new_listing_items = self.process_categories_listing_page(listing_to_process=listing)
 
-            if queued_item.attempts <= RecipeLister.MAX_RETRIES:
-                if queued_item.mode == Mode.CATEGORIES_LISTING:
-                    queued_item.startdate = datetime.now()
-                    queued_item.attempts += 1
+                    listing.enddate = datetime.now()
+                    listing.successful = True
                     
-                    try:
-                        page_content:HTML = load_page(link=queued_item.link)
-                        number_of_pages = self.get_total_page_quantity(page_content=page_content)
-                        listing_links_per_category = self.generate_listing_links(query_link=queued_item.link, number_of_pages=number_of_pages)
-                        
-                        for link in listing_links_per_category:
-                            listing_item = Listing(
-                                link = link,
-                                mode = Mode.CATEGORIES_LISTING_PAGE, 
-                                attempts = 0
-                            )
-                            
-                            self.logger.info(f"Adding link {listing_item.link} to queue.")
-                            queue.put(listing_item)
-                        
-                        self.logger.info("Link processing successful")
-
-                    except Exception:
-                        self.logger.info(f"Error while processing link {queued_item.link} for {queued_item.mode} ")
-                        queued_item.enddate = datetime.now()
-                        queued_item.sucessful = False
-                        queue.put(queued_item)
-
-                elif queued_item.mode == Mode.CATEGORIES_LISTING_PAGE:
-                    queued_item.startdate = datetime.now()
-                    queued_item.attempts += 1
+                except Exception:
+                    self.logger.info(f"Error while processing link {listing.link} for {listing.mode} ")
+                    listing.enddate = datetime.now()
+                    listing.successful = False
                     
-                    try:
-                        all_detail_links = self.get_detail_links(link = queued_item.link)
+                self.insert_new_listing_items(new_listing_items=new_listing_items)
+                update_listing(listing=listing)
+
+
+        # No listing item exists in database
+        else:
+            self.logger.info("There are no listings to process.")
+            categories_listing_items = self.seed_listing_with_categories()
+            self.insert_new_listing_items(new_listing_items=categories_listing_items)
+
+
+    def insert_new_listing_items(self, new_listing_items:List[Listing]):
+        """ Inserts a list of new listing item in database """
+        
+        with next(get_database()) as database:
+            for listing_item in new_listing_items:
+                self.logger.info(f"Processing {listing_item.link}")
+                try:
+                    database.add(listing_item)
+                    database.commit()
+                    self.logger.info("Link processing successful")
 
                         
-                        with next(get_database()) as database:
-                            for link in all_detail_links:
-                                listing_item = Listing(
-                                    link = link,
-                                    mode = Mode.RECIPE_LINKS,
-                                    attempts = 0
-                                )
+                except IntegrityError as e:
+                    self.logger.warning("Listing item is a duplicate. Rollback.")
+                    database.rollback()
 
-                                try:
-                                    database.add(listing_item)
-                                    database.commit()
-                                    self.logger.info("Link processing successful")
-                                
-                                except IntegrityError as e:
-                                    self.logger.warning("Listing item is a duplicate. Rollback.")
-                                    database.rollback()
 
-                    
-                    except Exception:
-                        self.logger.info(f"Error while processing link {queued_item.link} for {queued_item.mode} ")
-                        queued_item.enddate = datetime.now()
-                        queued_item.successful = False
-                        queue.put(queued_item)
+    def seed_listing_with_categories(self):
+        """ Creates the seeds for the listing from the original categories to scrape """
+        
+        query_links = self.generate_query_links()
+        listing_items: List[Listing] = []
 
-                else:
-                    self.logger.info(f"Unmanaged mode for link {queued_item.link}: {queued_item.mode}")
+        for link in query_links:
+            listing_item = Listing(
+                link = link,
+                mode = Mode.CATEGORIES_LISTING,
+                successful = False,
+                attempts = 0,
+            )
 
-            else:
-                self.logger.info(f"Item has {queued_item.attempts} retries. Skipping.")
+            listing_items.append(listing_item)
+        
+        return listing_items
+    
+    
+    def process_categories_listing(self, listing_to_process:Listing) -> List[Listing]:
+        """ Process the categories listing and generates the categories listing pages listing items. """
+        
+        page_content:HTML = load_page(link=listing_to_process.link)
+        number_of_pages = self.get_total_page_quantity(page_content=page_content)
+        listing_links_per_category = self.generate_listing_links(query_link=listing_to_process.link, number_of_pages=number_of_pages)
+        categories_listing_page_items: List[Listing] = []
+        
+        for link in listing_links_per_category:
+            listing_item = Listing(
+                link = link,
+                mode = Mode.CATEGORIES_LISTING_PAGE, 
+                attempts = 0
+            )
+            
+            self.logger.info(f"Adding link {listing_item.link} to queue.")
+            categories_listing_page_items.append(listing_item)
+        
+        self.logger.info(f"Link processing successful for {listing_to_process.link}")
+        return categories_listing_page_items
+    
 
-            pass
+    def process_categories_listing_page(self, listing_to_process:Listing) -> List[Listing]:
+        """ Process the categories listing pages items and generates recipe detail links. """
+        
+        all_detail_links = self.get_detail_links(link = listing_to_process.link)
+        detail_links_items: List[Listing] = []
+
+        for link in all_detail_links:
+            listing_item = Listing(
+                link = link,
+                mode = Mode.RECIPE_LINKS,
+                attempts = 0
+            )
+
+            detail_links_items.append(listing_item)
+
+        return detail_links_items
 
     def get_total_page_quantity(self, page_content:HTML) -> int:
         """ Calculates the maximum number of pages based on the number of search results. """
@@ -181,23 +202,8 @@ if __name__ == "__main__":
     app = RecipeLister(logger = logger)
     app.run()
 
-    #TODO - listing modes
-    # - generic listing mode
-    #TODO - details mode
-    # - recipes
-    # - logging
-    #TODO - all modes
-    # - document
-    # - error management
-
-    #TODO - database work
-    # - details
-    #   - we might be getting more links from details
-    # - migrations
-    #   - make OOP models
-    #TODO - run scripts
-    # - find of other solutions than NiFi would be easier
-    #TODO - logging
-    # - add logging
+    #TODO - make sure details table is created on deployment
+    #TODO - get stacktrace in logger
+    #TODO - add cron to container
 
     
