@@ -1,7 +1,9 @@
 requests-html
 alembic
+celery[redis]
 pydantic
 sqlalchemy
 loguru
 mysql-connector-python
 lxml.html.clean
+redis

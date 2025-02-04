@@ -8,6 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     mysql-server \
+    gettext \
+    redis-server \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -26,8 +28,11 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 # Copy the rest of the application files
 COPY . /app
 
+# Copy files for mysql
+COPY mysql-init.sql /docker-entrypoint-initdb.d/
+
 # Expose MySQL port
-EXPOSE 3306
+EXPOSE 3306 6379
 
 # Copy the entrypoint script and give execution permissions
 COPY entrypoint.sh /entrypoint.sh

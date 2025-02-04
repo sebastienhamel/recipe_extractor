@@ -6,6 +6,10 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 echo "Starting MySQL..."
 service mysql start
 
+# Start redis server
+echo "Starting Redis..."
+service redis-server start
+
 export PATH="/app/venv/bin:$PATH"
 
 # Wait for MySQL to be ready
@@ -15,19 +19,26 @@ until mysqladmin ping -h localhost --silent; do
 done
 echo "MySQL is ready!"
 
-# Run MySQL initialization script (if applicable)
-if [ -f "/docker-entrypoint-initdb.d/mysql-init.sql" ]; then
-    echo "Initializing database..."
-    mysql < /docker-entrypoint-initdb.d/mysql-init.sql
-fi
+# Create a temporary SQL file with actual credentials
+envsubst < /docker-entrypoint-initdb.d/mysql-init.sql > /tmp/mysql-init.sql
+
+# Run the SQL script
+echo "Initializing database credentials from file"
+mysql -u root -p"$MYSQL_ROOT_PASSWORD" < /tmp/mysql-init.sql
 
 # Activate virtual environment
 echo "Activating virtual environment"
 source /app/venv/bin/activate
 
-# # Apply Alembic migrations
-# echo "Running Alembic migrations..."
-# alembic upgrade head
+# Apply Alembic migrations
+echo "Running Alembic migrations..."
+alembic stamp head
+alembic upgrade head
+
+# Starting celery
+echo "Starting Celery worker"
+export PYTHONPATH=$/app/src:$PYTHONPATH
+celery -A tasks worker --loglevel=info
 
 # Start the application (modify this line for your app)
 echo "Starting the application..."

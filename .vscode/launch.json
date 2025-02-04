@@ -12,7 +12,7 @@
             "console": "integratedTerminal",
             "justMyCode": false,
 
-        }
+        },
         {
             "name": "Recipe scraper - Details",
             "type": "debugpy",

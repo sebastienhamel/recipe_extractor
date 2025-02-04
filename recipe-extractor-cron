@@ -1,0 +1,3 @@
+PATH="/app/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+* * * * * export $(cat /etc/environment | xargs) && /app/venv/bin/python3 /app/src/listing_scraper.py >> /var/log/cron.log 2>&1
+* * * * * export $(cat /etc/environment | xargs) && /app/venv/bin/python3 /app/src/detail_scraper.py >> /var/log/cron.log 2>&1
