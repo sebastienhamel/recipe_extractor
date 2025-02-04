@@ -9,7 +9,7 @@ from typing import List
 from src.models.modes import Mode
 
 from src.utils.logger_service import get_logger
-from src.utils.database.database_connection import engine, get_database, get_listing_to_process, update_listing
+from src.utils.database.database_connection import engine, get_database, get_listing_to_process, update_listing, is_listing_complete
 from src.utils.database.database_tables import Base, Listing
 from src.utils.scraper_service import load_page
 
@@ -27,11 +27,11 @@ class RecipeLister():
         """ Processes the listing for the recipe scraper. """
 
         self.logger.info("Starting listing modes.")
-        # queue = Queue()
 
         listings_to_process = get_listing_to_process(limit=5)
         
-        if listings_to_process:
+        if listings_to_process and not is_listing_complete():
+            self.logger.info("There are listing elements to process.")
             
             #check for max retries
             for listing in listings_to_process:
@@ -61,10 +61,13 @@ class RecipeLister():
 
 
         # No listing item exists in database
-        else:
-            self.logger.info("There are no listings to process.")
+        elif not listings_to_process and not is_listing_complete():
+            self.logger.info("Listing has not ran before, proceeding to seeding.")
             categories_listing_items = self.seed_listing_with_categories()
             self.insert_new_listing_items(new_listing_items=categories_listing_items)
+
+        else:
+            self.logger.info("Listing is complete. Nothing to process.")
 
 
     def insert_new_listing_items(self, new_listing_items:List[Listing]):
@@ -203,9 +206,5 @@ if __name__ == "__main__":
     app.run()
 
     #TODO - get stacktrace in logger
-    #TODO - add celery to container
-    #TODO - start celery: celery -A tasks worker --loglevel=info
-    #TODO - start beat: celery -A tasks beat --loglevel=info
-    #TODO - add logging to details
 
     

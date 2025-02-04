@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from src.utils.logger_service import get_logger
 from src.utils.scraper_service import load_page
 from src.utils.database.database_tables import Detail
-from src.utils.database.database_connection import get_details_to_process, update_listing
+from src.utils.database.database_connection import get_details_to_process, update_listing, is_detail_complete
 from src.utils.database.database_connection import get_database
 
 from src.models.details import Recipe, Ingredient, Method
@@ -26,56 +26,66 @@ class RecipeScraper():
     def run(self):
         listing_to_process = get_details_to_process(limit=5)
 
-        
-        for listing in listing_to_process:
-            self.logger.info(f"Processing details for {listing.link}")
-            listing.attempts += 1
-            listing.startdate = datetime.now()
-            self.page_content = load_page(listing.link)
+        if listing_to_process and not is_detail_complete():
+            for listing in listing_to_process:
+                self.logger.info(f"Processing details for {listing.link}")
+                listing.attempts += 1
+                listing.startdate = datetime.now()
+                self.page_content = load_page(listing.link)
 
-            with(next(get_database())) as database:
-                try:
-                    self.get_details()
-                    listing.enddate = datetime.now()
-                    listing.successful = True
-
-                    detail_item = Detail(
-                        link = listing.link,
-                        timestamp = datetime.now(),
-                        data = app.details.data
-                    )
-
+                with(next(get_database())) as database:
                     try:
-                        database.add(detail_item)
-                        app.logger.info("Link processing successful")
-                        database.commit()
-                    
-                    except IntegrityError as e:
-                        app.logger.warning("Detail item is a duplicate. Rollback.")
-                        database.rollback()
-                    
-                except:
-                    listing.enddate = datetime.now()
-                    listing.successful = False
+                        self.get_details()
+                        listing.enddate = datetime.now()
+                        listing.successful = True
 
-                #update listing
-                update_listing(listing=listing)
+                        detail_item = Detail(
+                            link = listing.link,
+                            timestamp = datetime.now(),
+                            data = self.details.data
+                        )
+
+                        try:
+                            database.add(detail_item)
+                            self.logger.info("Link processing successful")
+                            database.commit()
+                        
+                        except IntegrityError as e:
+                            self.logger.warning("Detail item is a duplicate. Rollback.")
+                            database.rollback()
+                        
+                    except:
+                        listing.enddate = datetime.now()
+                        listing.successful = False
+
+                    #update listing
+                    update_listing(listing=listing)
+
+        elif not listing_to_process and not is_detail_complete():
+            self.logger.info("There are no details to process because the listing hasn't found details yet.")
+
+        elif not listing_to_process and is_detail_complete():
+            self.logger.info("Details is complete, there are no links to process.")
         
-    def get_details(self):        
+    def get_details(self):  
+        self.logger.info("Working on details...")      
         self.get_recipe_name()
         self.get_recipe_info_section()
         self.get_category()
         self.get_keywords()
         self.get_ingredients()
         self.get_method()
+        self.logger.info("Recipe details acquired!")
 
     def get_recipe_name(self):
+        self.logger.info("Working on recipe name...")
         name_element = self.page_content.xpath("//h1")[0]
         recipe_name = name_element.text
         self.details.data.name = recipe_name
 
 
     def get_recipe_info_section(self):
+        self.logger.info("Working on info section...")
         """ Gets all value from the recipe-infos section on the page """
 
         info_search_terms = {
@@ -92,6 +102,7 @@ class RecipeScraper():
 
     
     def get_ingredients(self):
+        self.logger.info("Working on ingredients...")
         ingredients:List[Ingredient] = []
 
         ingredient_elements = self.page_content.xpath("//h4[text()='Ingrédients']/following::ul//li[@class='itemListe']") 
@@ -116,6 +127,7 @@ class RecipeScraper():
 
 
     def get_method(self):
+        self.logger.info("Working on recipe method...")
         method:List[Method] = []
 
         method_elements = self.page_content.xpath("//section[contains(@class, 'method')]")[0]
@@ -149,6 +161,7 @@ class RecipeScraper():
 
 
     def get_category(self):
+        self.logger.info("Working on category...")
         categories = []
         categories_element = self.page_content.xpath("//div[contains(@class, 'categories')]//li/a")
 
@@ -159,6 +172,7 @@ class RecipeScraper():
 
 
     def get_keywords(self):
+        self.logger.info("Working on keyworkds...")
         keywords = []
         keywords_element = self.page_content.xpath("//div[contains(@class, 'categories')]//li/a")
 
