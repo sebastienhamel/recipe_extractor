@@ -39,6 +39,7 @@ alembic upgrade head
 echo "Starting Celery worker"
 export PYTHONPATH=$/app/src:$PYTHONPATH
 celery -A tasks worker --loglevel=info
+celery -A tasks beat --loglevel=info
 
 # Start the application (modify this line for your app)
 echo "Starting the application..."

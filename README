@@ -35,4 +35,9 @@ this WILL NOT work for now):
     - MYSQL_PASSWORD=yourOtherPassword
     - This file should have the .env extension and will be used in the docker run command below.
 - build your container using docker build -t containerName
-- run your image using docker run --env-file=nameOfYourFile.env containerName 
+- run your image using docker run --env-file=nameOfYourFile.env -p 3306:3306 -p 6379:6379 containerName 
+
+A couple of notes: 
+1. After the first start of the celery beats, it is normal to have this error: "dbm.error: db type is dbm.gnu, 
+but the module is not available". At the second beat, this error will go away. 
+2.  
