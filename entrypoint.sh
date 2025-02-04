@@ -38,9 +38,10 @@ alembic upgrade head
 # Starting celery
 echo "Starting Celery worker"
 export PYTHONPATH=$/app/src:$PYTHONPATH
-celery -A tasks worker --loglevel=info
+celery -A tasks worker --loglevel=info &
+sleep 10 #give celery some time to start
 celery -A tasks beat --loglevel=info
 
-# Start the application (modify this line for your app)
+# Keep the container running
 echo "Starting the application..."
-/bin/bash  # Modify this line if needed
+/bin/bash
