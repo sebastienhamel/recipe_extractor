@@ -26,6 +26,36 @@ def get_database():
     finally:
         database.close()
 
+def is_listing_complete():
+    database = SessionLocal()
+
+    try:
+        return database.query(Listing).filter(
+            Listing.mode.__ne__(Mode.RECIPE_LINKS)).count() == database.query(Listing).filter(
+            and_(
+                Listing.mode.__ne__(Mode.RECIPE_LINKS),
+                Listing.successful.__eq__(1)
+            )
+        ).count() and database.query(Listing).count() > 0
+    
+    finally:
+        database.close()
+
+def is_detail_complete():
+    database = SessionLocal()
+
+    try:
+        return database.query(Listing).filter(
+            and_(
+                Listing.mode.__eq__(Mode.RECIPE_LINKS), 
+                Listing.successful.__eq__(1)
+            ) #number of successful = true == number of recipe links -> The details is complete.
+        ).count() == database.query(Listing).filter(
+            Listing.mode.__eq__(Mode.RECIPE_LINKS)).count() and database.query(Listing).filter(
+                Listing.mode.__eq__(Mode.RECIPE_LINKS)).count() > 0 #There are recipe links present
+    finally:
+        database.close()
+
 def get_listing_to_process(limit:int) -> List[Listing]:
     database = SessionLocal()
 
