@@ -6,24 +6,62 @@ from datetime import datetime
 from requests_html import HTML
 from sqlalchemy.exc import IntegrityError
 
-from utils.logger_service import get_logger
-from utils.scraper_service import load_page
-from utils.database.database_tables import Detail
-from utils.database.database_connection import get_details_to_process, update_listing
-from utils.database.database_connection import get_database
+from src.utils.logger_service import get_logger
+from src.utils.scraper_service import load_page
+from src.utils.database.database_tables import Detail
+from src.utils.database.database_connection import get_details_to_process, update_listing
+from src.utils.database.database_connection import get_database
 
-from models.details import Recipe, Ingredient, Method
+from src.models.details import Recipe, Ingredient, Method
 
 
 class RecipeScraper():
 
-    def __init__(self, page_content:HTML, logger):
+    def __init__(self, logger, page_content:HTML = None):
         self.page_content = page_content
         self.logger = logger
         self.details = Detail()
         self.details.data = Recipe()
 
     def run(self):
+        listing_to_process = get_details_to_process(limit=5)
+
+        
+        for listing in listing_to_process:
+            self.logger.info(f"Processing details for {listing.link}")
+            listing.attempts += 1
+            listing.startdate = datetime.now()
+            self.page_content = load_page(listing.link)
+
+            with(next(get_database())) as database:
+                try:
+                    self.get_details()
+                    listing.enddate = datetime.now()
+                    listing.successful = True
+
+                    detail_item = Detail(
+                        link = listing.link,
+                        timestamp = datetime.now(),
+                        data = app.details.data
+                    )
+
+                    try:
+                        database.add(detail_item)
+                        app.logger.info("Link processing successful")
+                        database.commit()
+                    
+                    except IntegrityError as e:
+                        app.logger.warning("Detail item is a duplicate. Rollback.")
+                        database.rollback()
+                    
+                except:
+                    listing.enddate = datetime.now()
+                    listing.successful = False
+
+                #update listing
+                update_listing(listing=listing)
+        
+    def get_details(self):        
         self.get_recipe_name()
         self.get_recipe_info_section()
         self.get_category()
@@ -132,41 +170,5 @@ class RecipeScraper():
 
 if __name__ == "__main__":
     logger = get_logger(name = RecipeScraper.__name__)
-    listing_to_process = get_details_to_process(limit=5)
-    
-
-    for listing in listing_to_process:
-        logger.info(f"Processing details for {listing.link}")
-        listing.attempts += 1
-        listing.startdate = datetime.now()
-        page_content = load_page(listing.link)
-
-        app = RecipeScraper(logger = logger, page_content= page_content)
-
-        with(next(get_database())) as database:
-            try:
-                app.run()
-                listing.enddate = datetime.now()
-                listing.successful = True
-
-                detail_item = Detail(
-                    link = listing.link,
-                    timestamp = datetime.now(),
-                    data = app.details.data
-                )
-
-                try:
-                    database.add(detail_item)
-                    app.logger.info("Link processing successful")
-                    database.commit()
-                
-                except IntegrityError as e:
-                    app.logger.warning("Detail item is a duplicate. Rollback.")
-                    database.rollback()
-                
-            except:
-                listing.enddate = datetime.now()
-                listing.successful = False
-
-            #update listing
-            update_listing(listing=listing)
+    app = RecipeScraper(logger = logger)
+    app.run()

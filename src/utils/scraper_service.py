@@ -2,7 +2,7 @@ import requests
 import time
 
 from requests_html import HTML
-from utils.logger_service import get_logger
+from src.utils.logger_service import get_logger
 
 MAX_RETRIES = 5
 logger = get_logger(name = "Scraper service")
@@ -22,7 +22,7 @@ def load_page(link:str, current_attempts:int = 0) -> HTML:
 
     while current_attempts <= MAX_RETRIES:
         # Reduce de risk of being blocked since we are not using a proxy. 
-        time.sleep(60)
+        #time.sleep(60)
         
         response = requests.get(link)
 

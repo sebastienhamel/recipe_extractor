@@ -6,12 +6,12 @@ from requests_html import HTML
 from sqlalchemy.exc import IntegrityError
 from typing import List
 
-from models.modes import Mode
+from src.models.modes import Mode
 
-from utils.logger_service import get_logger
-from utils.database.database_connection import engine, get_database, get_listing_to_process, update_listing
-from utils.database.database_tables import Base, Listing
-from utils.scraper_service import load_page
+from src.utils.logger_service import get_logger
+from src.utils.database.database_connection import engine, get_database, get_listing_to_process, update_listing
+from src.utils.database.database_tables import Base, Listing
+from src.utils.scraper_service import load_page
 
 Base.metadata.create_all(bind = engine)
 
@@ -185,7 +185,7 @@ class RecipeLister():
     def generate_query_links(self) -> List[str]:
         """ Generates the first query links for the scraper. """
 
-        logger.info("Generating query links.")
+        self.logger.info("Generating query links.")
         query_term_filter = "search[query]="
         #query_terms = ["galette"]
         query_terms = ["galette", "biscuit", "gateau"]
@@ -202,8 +202,10 @@ if __name__ == "__main__":
     app = RecipeLister(logger = logger)
     app.run()
 
-    #TODO - make sure details table is created on deployment
     #TODO - get stacktrace in logger
-    #TODO - add cron to container
+    #TODO - add celery to container
+    #TODO - start celery: celery -A tasks worker --loglevel=info
+    #TODO - start beat: celery -A tasks beat --loglevel=info
+    #TODO - add logging to details
 
     

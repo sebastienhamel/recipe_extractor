@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, JSON, DateTime, Boolean, MetaData
 from sqlalchemy.ext.declarative import declarative_base
-from models.encoder import JSONEncodedRecipe
+from src.models.encoder import JSONEncodedRecipe
 
 Base = declarative_base()
 metadata = MetaData()

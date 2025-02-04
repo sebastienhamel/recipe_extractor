@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from models.modes import Mode
+from src.models.modes import Mode
 
 class Listing(BaseModel):
     id: int|None = Field(init = False, default = None)

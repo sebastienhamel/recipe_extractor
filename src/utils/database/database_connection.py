@@ -4,8 +4,8 @@ from typing import List
 from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker
 
-from utils.database.database_tables import Listing
-from models.modes import Mode
+from src.utils.database.database_tables import Listing
+from src.models.modes import Mode
 
 DATABSE_URL = os.getenv("DATABASE_URL")
 
