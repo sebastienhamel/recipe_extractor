@@ -25,19 +25,19 @@ galettes) (done)
 - Perform statistical analysis on the data
 - Answer my question
 
-Here are the steps you should follow in order to build the container (bear in mind, I am not finished with Docker
-this WILL NOT work for now):
+Here are the steps you should follow in order to build the container:
 - setup a file at the root of your project, containing the following:
-    - the full url to the database: DATABASE_URL=mysql+mysqlconnector://username:password@localhost:3306
+    - the full url to the database: DATABASE_URL=mysql+mysqlconnector://username:password@mysql-db:3306?charset=utf8mb4
     - MYSQL_ROOT_PASSWORD=yourPassword
     - MYSQL_DATABASE=recipeextractor
     - MYSQL_USER=recipe_scraper
     - MYSQL_PASSWORD=yourOtherPassword
     - This file should have the .env extension and will be used in the docker run command below.
-- build your container using docker build -t containerName
-- run your image using docker run --env-file=nameOfYourFile.env -p 3306:3306 -p 6379:6379 containerName 
+- create a custom network container by running: docker network create scraper-network
+- run your containers using: docker compose up
+    - This will instanciate three containers: the database, the redis container and the scraper container. 
 
 A couple of notes: 
 1. After the first start of the celery beats, it is normal to have this error: "dbm.error: db type is dbm.gnu, 
 but the module is not available". At the second beat, this error will go away. 
-2.  
+2. If you want to test your connection to the database, you can use: docker exec -it mysql-db mysql -u root -p. Then enter the root password from you .env file. 

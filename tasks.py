@@ -5,9 +5,8 @@ from src.listing_scraper import RecipeLister
 from src.detail_scraper import RecipeScraper
 from src.utils.logger_service import get_logger
 
-app = Celery('tasks', broker='redis://localhost:6379/0', backend='redis://localhost:6379/0')
+app = Celery('tasks', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
 app.conf.beat_schedule = {}
-# app.conf.beat_schedule_filename = '/app/celerybeat-schedule'
 
 listing_logger = get_logger(name = RecipeLister.__name__)
 detail_logger = get_logger(name = RecipeLister.__name__)
@@ -23,7 +22,7 @@ def run_scraper():
 app.conf.beat_schedule = {
     'run-every-5-minutes': {
         'task': 'tasks.run_scraper',
-        'schedule': 300.0,  # every 5 minutes
+        'schedule': 1000.0,  # every 15 minutes
     },
 }
 

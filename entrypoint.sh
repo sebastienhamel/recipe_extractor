@@ -2,9 +2,9 @@
 
 set -e  # Exit immediately if a command exits with a non-zero status.
 
-# Start MySQL in the background
-echo "Starting MySQL..."
-service mysql start
+# # Start MySQL in the background
+# echo "Starting MySQL..."
+# service mysql start
 
 # Start redis server
 echo "Starting Redis..."
@@ -14,17 +14,17 @@ export PATH="/app/venv/bin:$PATH"
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
-until mysqladmin ping -h localhost --silent; do
+until mysqladmin ping -h "$MYSQL_HOST" --silent; do
     sleep 2
 done
 echo "MySQL is ready!"
 
-# Create a temporary SQL file with actual credentials
-envsubst < /docker-entrypoint-initdb.d/mysql-init.sql > /tmp/mysql-init.sql
+# # Create a temporary SQL file with actual credentials
+# envsubst < /docker-entrypoint-initdb.d/mysql-init.sql > /tmp/mysql-init.sql
 
-# Run the SQL script
-echo "Initializing database credentials from file"
-mysql -u root -p"$MYSQL_ROOT_PASSWORD" < /tmp/mysql-init.sql
+# # Run the SQL script
+# echo "Initializing database credentials from file"
+# mysql -u root -p"$MYSQL_ROOT_PASSWORD" < /tmp/mysql-init.sql
 
 # Activate virtual environment
 echo "Activating virtual environment"

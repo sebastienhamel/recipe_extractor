@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  mysql-db:
+    image: mysql:8
+    container_name: mysql-db
+    env_file: database.env
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+    ports:
+      - "3307:3306"
+    networks:
+      - scraper-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - scraper-network
+
+  scraper:
+    build: .
+    container_name: scraper-container
+    env_file: database.env
+    depends_on:
+      - mysql-db
+      - redis
+    networks:
+      - scraper-network
+    restart: unless-stopped
+    command: ["/app/entrypoint.sh"]
+
+networks:
+  scraper-network:
+
+volumes:
+  mysql_data:
