@@ -205,6 +205,5 @@ if __name__ == "__main__":
     app = RecipeLister(logger = logger)
     app.run()
 
-    #TODO - get stacktrace in logger
 
     
