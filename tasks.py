@@ -20,7 +20,7 @@ def run_scraper():
     detail_scraper.run()
 
 app.conf.beat_schedule = {
-    'run-every-5-minutes': {
+    'run-every-15-minutes': {
         'task': 'tasks.run_scraper',
         'schedule': 1000.0,  # every 15 minutes
     },
