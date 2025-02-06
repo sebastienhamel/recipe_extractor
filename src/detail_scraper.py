@@ -28,38 +28,44 @@ class RecipeScraper():
 
         if listing_to_process and not is_detail_complete():
             for listing in listing_to_process:
-                self.logger.info(f"Processing details for {listing.link}")
-                listing.attempts += 1
-                listing.startdate = datetime.now()
-                self.page_content = load_page(listing.link)
+                
+                # check if max attempts achieved
+                if listing.attempts <= 5: 
+                    self.logger.info(f"Processing details for {listing.link}")
+                    listing.attempts += 1
+                    listing.startdate = datetime.now()
+                    self.page_content = load_page(listing.link)
 
-                with(next(get_database())) as database:
-                    try:
-                        self.get_details()
-                        listing.enddate = datetime.now()
-                        listing.successful = True
-
-                        detail_item = Detail(
-                            link = listing.link,
-                            timestamp = datetime.now(),
-                            data = self.details.data
-                        )
-
+                    with(next(get_database())) as database:
                         try:
-                            database.add(detail_item)
-                            self.logger.info("Link processing successful")
-                            database.commit()
-                        
-                        except IntegrityError as e:
-                            self.logger.warning("Detail item is a duplicate. Rollback.")
-                            database.rollback()
-                        
-                    except:
-                        listing.enddate = datetime.now()
-                        listing.successful = False
+                            self.get_details()
+                            listing.enddate = datetime.now()
+                            listing.successful = True
 
-                    #update listing
-                    update_listing(listing=listing)
+                            detail_item = Detail(
+                                link = listing.link,
+                                timestamp = datetime.now(),
+                                data = self.details.data
+                            )
+
+                            try:
+                                database.add(detail_item)
+                                self.logger.info("Link processing successful")
+                                database.commit()
+                            
+                            except IntegrityError as e:
+                                self.logger.warning("Detail item is a duplicate. Rollback.")
+                                database.rollback()
+                            
+                        except:
+                            listing.enddate = datetime.now()
+                            listing.successful = False
+
+                        #update listing
+                        update_listing(listing=listing)
+                
+                else:
+                    self.logger.info("Max attempts already too high for this record. Skipping.")
 
         elif not listing_to_process and not is_detail_complete():
             self.logger.info("There are no details to process because the listing hasn't found details yet.")
@@ -97,8 +103,13 @@ class RecipeScraper():
 
         for search_term, field_name in info_search_terms.items():
             x_path = f"//section[contains(@class, 'recipe-infos')]//li//span[contains(text(), '{search_term}')]/following-sibling::span"
-            field_value = self.page_content.xpath(x_path)[0].text
-            setattr(self.details.data, field_name, field_value)
+            
+            try:
+                field_value = self.page_content.xpath(x_path)[0].text
+                setattr(self.details.data, field_name, field_value)
+            except IndexError:
+                self.logger.error(f"{field_name} unavailable for this link. Setting empty string as value.")
+                setattr(self.details.data, field_name, "")
 
     
     def get_ingredients(self):
@@ -154,8 +165,11 @@ class RecipeScraper():
             method.append(step)
 
         # Final check to make sure we have all steps for method
-        if number_of_steps == len(method):
+        if number_of_steps == len(method) and len(method) != 0:
             self.details.data.method = method
+        elif len(method) == 0:
+            self.logger.error(f"Could not get method for link {self.details.link}.")
+            self.details.data.method = method # Will assess if this has impact on data quality in a later step.
         else:
             raise ValueError(f"The code did not return all the method steps for {self.details.link}. Returned only the following steps {method}")
 
