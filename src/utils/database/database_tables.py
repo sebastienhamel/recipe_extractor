@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, Boolean, MetaData
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from src.models.encoder import JSONEncodedRecipe
 
