@@ -20,6 +20,14 @@
             "program": "src/detail_scraper.py",
             "console": "integratedTerminal",
             "justMyCode": false,
+        }, 
+        {
+            "name": "Recipe analyzer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/data_analyzer.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
     ]
 }
