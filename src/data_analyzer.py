@@ -40,33 +40,33 @@ class DataAnalyzer():
                 }
 
                 converted_details.append(detail_dict)
-        df = pandas.DataFrame([detail.model_dump() for detail in self.all_details])
 
         df = pandas.DataFrame(converted_details)
+        #Nope, not how it should be done
+        exploded_data_df = pandas.json_normalize(df['data'])
+        exploded_ingredients_df = pandas.json_normalize(exploded_data_df['ingredients'])
+        exploded_method_df = pandas.json_normalize(exploded_data_df['method'])
+
 
     def categorize_recipe(self):
         regex_gateau = r"g*teau"
 
         for detail in self.all_details:
+            detail.is_right_category = False
             if re.search(regex_gateau, detail.data.name):
+                detail.is_right_category = True
                 detail.category = Category.GATEAU
-                print(detail.data.name)
 
             elif "galette" in detail.data.name:
+                detail.is_right_category = True
                 detail.category = Category.GALETTE
-                print(detail.data.name)
 
             elif "biscuit" in detail.data.name:
+                detail.is_right_category = True
                 detail.category = Category.BISCUIT
-                print(detail.data.name)
 
-        print("Salut!")
+        self.all_details = [detail for detail in self.all_details if detail.is_right_category]
 
-        for index, detail in enumerate(self.all_details):
-            if not detail.category:
-                self.all_details.pop(index)
-
-        print("Salut!")
 
 
     def get_data_from_database(self):
@@ -101,12 +101,7 @@ class DataAnalyzer():
                 if word in self.EXCLUDED_NAMES:
                     detail.should_be_excluded = True
 
-
-        for index, detail in enumerate(self.all_details):
-            if detail.should_be_excluded:
-                self.all_details.pop(index)
-
-
+        self.all_details = [detail for detail in self.all_details if not detail.should_be_excluded]
 
 
 
